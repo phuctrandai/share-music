@@ -71,3 +71,8 @@ body {
   justify-content: center;
   align-items: center;
 }
+
+#peerID, #connection-status {
+  font-style: italic;
+  font-weight: bold;
+}

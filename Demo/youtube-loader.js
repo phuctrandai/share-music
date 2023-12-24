@@ -1,13 +1,14 @@
 let currentPlayingTime = 0;
 let tag = document.createElement("script");
 tag.src = "https://www.youtube.com/iframe_api";
+
 let firstScriptTag = document.getElementsByTagName("script")[0];
 firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
 function onYouTubeIframeAPIReady() {
   player = new window.YT.Player("player", {
-    height: '90%',
-    width: '90%',
+    height: "90%",
+    width: "90%",
     videoId: "M7lc1UVf-VE",
     playerVars: {
       playsinline: 1,
@@ -36,6 +37,7 @@ function onPlayerStateChange(event) {
         currentTime: player.getCurrentTime(),
       },
     });
+
     if (event.data === 3) {
       setTimeout(() => {
         player.playVideo();
@@ -44,5 +46,5 @@ function onPlayerStateChange(event) {
   }
 }
 function stopVideo() {
-  // player.stopVideo();
+  player.stopVideo();
 }

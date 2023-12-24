@@ -3,7 +3,6 @@ let addMusicBtn = document.querySelector("#add-music-btn");
 let otherIdInput = document.querySelector("#other-id");
 let inputYouTubeUrl = document.querySelector("#input-youtube-url");
 let peerIdEl = document.querySelector("#peerID");
-let errorEl = document.querySelector("#error-status");
 let connectionStatusEl = document.querySelector("#connection-status");
 let currentMusicList = [];
 let currentPlayingId = "";
@@ -20,12 +19,16 @@ peer.on("open", (id) => {
   peerId = id;
   peerReady = true;
   peerIdEl.innerHTML = id;
-  connectionStatusEl.innerHTML = "Connected.";
+  connectionStatusEl.innerHTML = "Connected to server.";
   connectBtn.attributes.removeNamedItem("disabled");
+
   console.log(">> Peer connected with ID: " + peerId);
+
+  // Init action for copy button
   document.querySelector("#copy-id").onclick = () => {
     navigator.clipboard.writeText(id).then((r) => console.log("ID Copied."));
   };
+
   connectBtn.onclick = () => {
     const conn = peer.connect(otherIdInput.value);
     connectionHandler(conn);
@@ -33,7 +36,6 @@ peer.on("open", (id) => {
 });
 
 const onSongChange = (songId) => {
-  // player.stopVideo();
   player.loadVideoById(songId, 0);
   player.playVideo();
 };
@@ -42,15 +44,18 @@ const renderMusicList = (conn) => {
   const musicItem = document.querySelector("#list-music-item");
   const playlistEl = document.querySelector("#playlist");
   playlistEl.innerHTML = "";
+
   currentMusicList.forEach((song) => {
     const item = musicItem.content.cloneNode(true);
     const songPlayBtn = item.querySelector(".song-play");
     item.querySelector(".song-name").innerHTML = song.url;
+
     if (currentPlayingId === song.songId) {
       songPlayBtn.disabled = true;
       songPlayBtn.innerText = "Playing...";
     } else {
       songPlayBtn.innerText = "Play";
+
       songPlayBtn.onclick = () => {
         if (!playerReady) {
           alert("Player is loading...");
@@ -58,10 +63,13 @@ const renderMusicList = (conn) => {
         }
         onSongChange(song.songId);
         currentPlayingId = song.songId;
+
+        // Send song id to remote peer
         conn.send({
           type: "set-playing",
           data: song.songId,
         });
+
         renderMusicList(conn);
       };
     }
@@ -70,6 +78,7 @@ const renderMusicList = (conn) => {
 };
 
 const connectionHandler = (conn) => {
+  connectionStatusEl.innerHTML = "Connected to " + conn.peer;
   peerConnected = true;
   peerConnection = conn;
 
@@ -79,6 +88,29 @@ const connectionHandler = (conn) => {
 
     // only enable add music btn when connected
     addMusicBtn.disabled = false;
+    addMusicBtn.onclick = () => {
+      if (
+        inputYouTubeUrl.value &&
+        inputYouTubeUrl.value.trim() !== "" &&
+        parseYtbLink(inputYouTubeUrl.value)
+      ) {
+        currentMusicList.push({
+          songId: parseYtbLink(inputYouTubeUrl.value),
+          url: inputYouTubeUrl.value,
+        });
+        conn.send({
+          type: "sync-playlist",
+          data: currentMusicList,
+        });
+        renderMusicList(conn);
+        inputYouTubeUrl.value = "";
+      }
+    };
+
+    // Emitted when the connection is established and ready-to-use.
+    conn.on("open", function () {});
+
+    // Emitted when data is received from the remote peer.
     conn.on("data", (packet) => {
       console.log(packet);
       // Data received over WebRTC
@@ -102,7 +134,6 @@ const connectionHandler = (conn) => {
                 // playing
                 player.seekTo(packet.data.currentTime);
                 player.playVideo();
-                // player.playVideo();
                 break;
               case 2:
                 // paused
@@ -113,43 +144,38 @@ const connectionHandler = (conn) => {
           break;
       }
     });
-    addMusicBtn.onclick = () => {
-      if (
-        inputYouTubeUrl.value &&
-        inputYouTubeUrl.value.trim() !== "" &&
-        parseYtbLink(inputYouTubeUrl.value)
-      ) {
-        currentMusicList.push({
-          songId: parseYtbLink(inputYouTubeUrl.value),
-          url: inputYouTubeUrl.value,
-        });
-        conn.send({
-          type: "sync-playlist",
-          data: currentMusicList,
-        });
-        renderMusicList(conn);
-        inputYouTubeUrl.value = "";
-      }
-    };
+
+    // Emitted when either you or the remote peer closes the data connection.
+    conn.on("close", function () {
+      console.log(">> Remote peer closes connection");
+      player.pauseVideo();
+    });
   });
 };
 
+// Emitted when a remote peer connect to you.
 peer.on("connection", (conn) => {
+  console.log(">> One peer remote connect to you");
   connectionHandler(conn);
 });
 
 peer.on("close", () => {
+  console.log(">> Peer on close");
   connectionStatusEl.innerHTML = "Closed.";
+  player.stopVideo();
 });
 
 peer.on("call", () => {
+  console.log(">> Peer on receive a call");
   connectionStatusEl.innerHTML = "Received a call.";
 });
 
 peer.on("disconnected", () => {
+  console.log(">> Peer on disconnected");
   connectionStatusEl.innerHTML = "Disconnected.";
 });
 
 peer.on("error", (err) => {
-  errorEl.innerHTML = err.type;
+  console.log(">> Peer on error: " + err);
+  connectionStatusEl.innerHTML = err.type;
 });
