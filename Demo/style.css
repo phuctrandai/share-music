@@ -72,7 +72,27 @@ body {
   align-items: center;
 }
 
+.flex-center {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#connection-info > div {
+  display: inline-block;
+}
+
 #peerID, #connection-status {
   font-style: italic;
   font-weight: bold;
+}
+
+#peerID-qrcode {
+  width: 60px;
+  height: 60px;
+}
+
+#peerID-qrcode > img {
+  width: 100%;
+  height: 100%;
 }

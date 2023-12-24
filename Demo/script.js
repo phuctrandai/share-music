@@ -33,6 +33,9 @@ peer.on("open", (id) => {
     const conn = peer.connect(otherIdInput.value);
     connectionHandler(conn);
   };
+
+  var peerIdQRCode = document.getElementById('peerID-qrcode');
+  new QRCode(peerIdQRCode, id);
 });
 
 const onSongChange = (songId) => {
